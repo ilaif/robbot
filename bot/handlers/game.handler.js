@@ -9,7 +9,7 @@ let gameDao = require('../dao/game.dao'),
     Game = require('../models/game.model');
 
 exports.isActive = (chatId) => {
-    let game = gameDao.findGameByChatId(chatId);
+    let game = exports.getGameByChatId(chatId);
     return game && game.isActive();
 };
 
@@ -20,7 +20,7 @@ exports.createNew = (chatId) => {
 };
 
 exports.getGameByChatId = (chatId) => {
-    return gameDao.findGameByChatId(chatId);
+    return gameDao.findOne({chatId, status: GameStatus.ACTIVE});
 };
 
 exports.start = (game) => {
@@ -49,4 +49,5 @@ exports.setState = (game, state) => {
 exports.finishGame = (game) => {
     game.status = GameStatus.FINISHED;
     game.state = GameState.FINISHED;
+    gameDao.update(game);
 };

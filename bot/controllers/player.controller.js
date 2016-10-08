@@ -8,6 +8,8 @@ let gameHandler = require('../handlers/game.handler'),
     voteHandler = require('../handlers/vote.handler'),
     _ = require('lodash');
 
+//TODO: Add general exception with message to group
+
 exports.join = (req, res) => {
 
     let isGameActive = gameHandler.isActive(req.chatId);
@@ -117,11 +119,13 @@ exports.vote = (req, res)=> {
         // Check if there's a majority of votes
         if (acceptedVotes.length > (numPlayers / 2)) {
             playerHandler.kickPlayer(voteRound);
-            let remainingGamePlayers = _.without(playingGamePlayers, {playerId: voteRound.playerId});
-            let results = _.partition(remainingGamePlayers, {color: PlayerColor.RED});
+            _.remove(playingGamePlayers, gp => {
+                return gp.playerId == voteRound.playerId;
+            });
+            let results = _.partition(playingGamePlayers, {color: PlayerColor.RED});
 
             let player = playerHandler.findById(voteRound.playerId);
-            let name = `${player.firstName} ${lastName}`;
+            let name = `${player.firstName} ${player.lastName}`;
             res.sendMessage(req.chatId, `Player ${name} is out of the game!`);
 
             // Check if game ended
