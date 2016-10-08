@@ -1,20 +1,27 @@
 'use strict';
 
-let UserInput = require('../models/user_input.model.js'),
-    gameController = require('../controllers/game.controller.js');
+let gameController = require('../controllers/game.controller.js'),
+    Route = require('../models/route.model'),
+    inputHandler = require('../handlers/input.handler'),
+    Command = require('../enums/Command');
 
-module.exports = (bot) => {
+class GameRoute extends Route {
+    constructor(opts) {
+        super(opts);
 
-    bot.onText(/\/new/, (msg, match) => {
-        let userInput = new UserInput(msg, 'new', null);
+        this.onText(/\/new/, (msg, match) => {
+            let req = inputHandler.parseCommand(Command.NEW, {msg, match});
+            gameController.newGame(req, this.res);
+        });
 
-        return gameController.newGame(bot, userInput);
-    });
 
-    bot.onText(/\/start/, (msg, match) => {
-        let userInput = new UserInput(msg, 'start', null);
+        this.onText(/\/start/, (msg, match) => {
+            let req = inputHandler.parseCommand(Command.START, {msg, match});
+            gameController.startGame(req, this.res);
+        });
+    }
+}
 
-        return gameController.startGame(bot, userInput);
-    });
-
+module.exports = (client) => {
+    new GameRoute({client});
 };

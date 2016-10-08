@@ -5,7 +5,7 @@ let utilsLib = require('../libs/utils.lib'),
     ModelEnum = require('../enums/Model'),
     VoteState = require('../enums/VoteState');
 
-class VoteRound extends BaseModel {
+class Vote extends BaseModel {
 
     static getName() {
         return ModelEnum.VOTE;
@@ -17,8 +17,8 @@ class VoteRound extends BaseModel {
 
         this.voteRoundId = data.voteRoundId;
         this.playerId = data.playerId; // The voter player id
-        this.accept = data.accept;
+        this.accepted = data.accepted;
     }
 }
 
-module.exports = VoteRound;
+module.exports = Vote;

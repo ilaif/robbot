@@ -1,6 +1,6 @@
 'use strict';
 
-let UserInput = require('../models/user_input.model.js');
+let UserInput = require('../models/request.model.js');
 
 module.exports = (bot) => {
 

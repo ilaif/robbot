@@ -1,25 +1,32 @@
 'use strict';
 
-let UserInput = require('../models/user_input.model.js'),
-    playerController = require('../controllers/player.controller');
+let playerController = require('../controllers/player.controller'),
+    Route = require('../models/route.model'),
+    inputHandler = require('../handlers/input.handler'),
+    Command = require('../enums/Command');
 
-module.exports = (bot) => {
+class PlayerRoute extends Route {
+    constructor(opts) {
+        super(opts);
 
-    bot.onText(/\/join/, (msg, match) => {
-        let userInput = new UserInput(msg, 'join', null);
+        this.onText(/\/join/, (msg, match) => {
+            let req = inputHandler.parseCommand(Command.JOIN, {msg, match});
+            playerController.join(req, this.res);
+        });
 
-        return playerController.join(bot, userInput);
-    });
+        this.onText(/\/vote (.+)/, (msg, match) => {
+            let req = inputHandler.parseCommand(Command.VOTE_ROUND, {msg, match});
+            playerController.startVoteRound(req, this.res);
+        });
 
-    bot.onText(/\/vote (.+)/, (msg, match) => {
-        let userInput = new UserInput(msg, 'startVoteRound', match[1]);
+        this.onText(/\/(yes|no)/, (msg, match) => {
+            let req = inputHandler.parseCommand(Command.VOTE, {msg, match});
+            playerController.vote(req, this.res);
+        });
 
-        return playerController.startVoteRound(bot, userInput);
-    });
+    }
+}
 
-    bot.onText(/\/(yes|no)/, (msg, match) => {
-        let userInput = new UserInput(msg, 'vote', match[1]);
-
-        return playerController.vote(bot, userInput);
-    });
+module.exports = (client) => {
+    new PlayerRoute({client});
 };

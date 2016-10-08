@@ -30,8 +30,6 @@ class Game extends BaseModel {
 
         this.chatId = data.chatId;
 
-        this.players = data.players || [];
-
         this.round = data.round || 0;
     }
 

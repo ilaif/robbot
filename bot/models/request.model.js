@@ -17,6 +17,7 @@ class Request {
             };
         }
 
+        console.log('logging request:', this);
     }
 
 }

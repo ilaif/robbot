@@ -5,46 +5,46 @@ let gameHandler = require('../handlers/game.handler'),
     GameState = require('../enums/GameState'),
     _ = require('lodash'),
     PlayerColor = require('../enums/PlayerColor'),
-    config = require('../config'),
-    msgLib = require('../libs/message.lib');
+    config = require('../config');
 
-exports.newGame = (bot, userInput) => {
+exports.newGame = (req, res) => {
 
-    let isGameActive = gameHandler.isActive(userInput.chatId);
+    let isGameActive = gameHandler.isActive(req.chatId);
 
     if (isGameActive) {
-
-        return msgLib.sendMessage(bot, userInput.chatId, `Game is already active`);
+        return res.sendMessage(req.chatId, `Game is already active`);
     }
     else {
+        res.sendMessage(req.chatId, `Initializing a new game :)`);
 
-        msgLib.sendMessage(bot, userInput.chatId, `Initializing a new game :)`);
+        let game = gameHandler.createNew(req.chatId);
 
-        let game = gameHandler.createNew(userInput.chatId);
-
-        msgLib.sendMessage(bot, userInput.chatId, `Type '/join' to join the game`);
+        return res.sendMessage(req.chatId, `Type '/join' to join the game`);
     }
 };
 
-exports.startGame = (bot, userInput) => {
+exports.startGame = (req, res) => {
 
-    let isGameActive = gameHandler.isActive(userInput.chatId);
+    let isGameActive = gameHandler.isActive(req.chatId);
     if (!isGameActive)
-        return msgLib.sendMessage(bot, userInput.chatId, `There's no active game, type /new to start a new game.`);
+        return res.sendMessage(req.chatId, `There's no active game, type /new to start a new game.`);
 
-    let game = gameHandler.getGameByChatId(userInput.chatId);
+    let game = gameHandler.getGameByChatId(req.chatId);
 
     if (game.state == GameState.INIT) {
 
-        if (game.players.length < 3 && !config.noRules) {
-            let playerNames = game.players.map(p => p.firstName).join(', ');
-            let joinedPlayers = game.players.length > 0 ? ` Currently ${playerNames} have joined.` : ` Nobody is joined`;
-            return msgLib.sendMessage(bot, userInput.chatId, `Less than 3 players joined the game. ${joinedPlayers}`);
+        let gamePlayers = playerHandler.findGamePlayersByGameId(game.id);
+        let players = playerHandler.findByIds(gamePlayers.map(gp => gp.playerId));
+
+        if (players.length < 3 && !config.noRules) {
+            let playerNames = players.map(p => p.firstName).join(', ');
+            let joinedPlayers = players.length > 0 ? ` Currently ${playerNames} have joined.` : ` Nobody is joined`;
+            return res.sendMessage(req.chatId, `Less than 3 players joined the game. ${joinedPlayers}`);
         }
 
-        let gamePlayers = gameHandler.start(game);
-        let players = gamePlayers.map(gamePlayer => playerHandler.findById(gamePlayer.playerId));
         let playersById = _.keyBy(players, 'id');
+
+        gameHandler.start(game);
 
         // Notify all players
 
@@ -53,17 +53,23 @@ exports.startGame = (bot, userInput) => {
             return `${i} - ${player.firstName} ${player.lastName}: ${_.upperFirst(gamePlayer.color)}`;
         }).join('\n');
 
+        let hiddenPlayersInfo = gamePlayers.map((gamePlayer, i) => {
+            //TODO: Don't hide own user
+            let player = playersById[gamePlayer.playerId];
+            return `${i} - ${player.firstName} ${player.lastName}: ?`;
+        }).join('\n');
+
         gamePlayers.forEach(gamePlayer => {
             if (gamePlayer.color == PlayerColor.RED) {
-                msgLib.sendMessage(bot, gamePlayer.playerId, `Congratulations! You are red!\nPlayers Info\n${playersInfo}`)
+                res.sendMessage(gamePlayer.playerId, `Congratulations! You are red!\nPlayers Info\n${playersInfo}`);
             } else {
-                msgLib.sendMessage(bot, gamePlayer.playerId, `You are black - Good luck! ^^`)
+                res.sendMessage(gamePlayer.playerId, `You are black - Good luck! ^^\nPlayers Info\n${hiddenPlayersInfo}`);
             }
         });
 
-        return msgLib.sendMessage(bot, userInput.chatId, `Game started, good luck :D`);
+        return res.sendMessage(req.chatId, `Game started, good luck :D`);
     }
     else {
-        return msgLib.sendMessage(bot, userInput.chatId, `You cannot start the game at this point.`);
+        return res.sendMessage(req.chatId, `You cannot start the game at this point.`);
     }
 };

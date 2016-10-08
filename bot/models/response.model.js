@@ -1,24 +1,14 @@
 'use strict';
 
-class RequestContext {
+class Response {
 
-    constructor(msg, cmd, input) {
-
-        this.chatId = msg.chat.id;
-        this.cmd = cmd;
-        this.input = input;
-
-        this.from = {};
-        if (msg.from) {
-            this.from = {
-                id: msg.from.id,
-                firstName: msg.from.first_name,
-                lastName: msg.from.last_name
-            };
-        }
-
+    constructor(opts) {
+        this._client = opts.client;
     }
 
+    sendMessage(recipientId ,msg) {
+        this._client.sendMessage(recipientId, msg);
+    }
 }
 
-module.exports = RequestContext;
+module.exports = Response;

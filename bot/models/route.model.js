@@ -1,13 +1,18 @@
 'use strict';
 
-let Promise = require('bluebird'),
-    config = require('../config');
+let Response = require('../models/response.model');
 
 class Route {
 
-    constructor() {
-        this.req = {};
+    constructor(opts) {
+        this._client = opts.client;
+        this.res = new Response(opts);
     }
+
+    onText(regex, cb) {
+        this._client.onText(regex, cb);
+    }
+
 }
 
-exports.Route = Route;
+module.exports = Route;

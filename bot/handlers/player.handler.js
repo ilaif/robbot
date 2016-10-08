@@ -3,35 +3,30 @@
 let playerDao = require('../dao/player.dao'),
     gamePlayerDao = require('../dao/game_player.dao'),
     GamePlayerStatus = require('../enums/GamePlayerStatus'),
-    _ = require('lodash'),
-    IdAlreadyExistsError = require('../errors/db.error').IdAlreadyExistsError,
-    Player = require('../models/player.model');
+    _ = require('lodash');
 
 exports.addToGame = (game, playerData) => {
-    try {
+    let results = playerDao.findOrCreate(playerData, playerData);
+    let player = results.instance;
+    let playerCreated = results.created;
+    let attributes = {playerId: player.id, gameId: game.id};
+    results = gamePlayerDao.findOrCreate(attributes, attributes);
+    let gamePlayer = results.instance;
+    let gamePlayerCreated = results.created;
 
-        let player = playerDao.create(playerData);
-        let attributes = {playerId: player.id, gameId: game.id};
-        let results = gamePlayerDao.findOrCreate(attributes, attributes);
-        let created = results.created;
-        let gamePlayer = results.instance;
-
-        return {
-            added: created,
-            instance: player
-        };
-
-    } catch (e) {
-        if (e instanceof IdAlreadyExistsError) {
-            //TODO: Implement logger
-            console.log('Player is already in the db');
-        } else {
-            throw e;
-        }
-    }
+    return {
+        added: gamePlayerCreated,
+        instance: player
+    };
 };
 
 exports.findPlayersInGroupByIdentifier = (players, identifier) => {
+
+    if (identifier === '' || identifier == ' ') {
+        return false;
+    }
+
+    identifier = identifier.trim();
 
     let n = parseInt(identifier);
     if (!isNaN(n)) {
@@ -67,6 +62,10 @@ exports.findById = (id) => {
     return playerDao.findById(id);
 };
 
+exports.findGamePlayerById = (id) => {
+    return gamePlayerDao.findOne({playerId: id});
+};
+
 exports.kickPlayer = (voteRound) => {
     let gamePlayer = gamePlayerDao.findOne({playerId: voteRound.playerId});
     gamePlayer.status = GamePlayerStatus.OUT;
@@ -75,4 +74,17 @@ exports.kickPlayer = (voteRound) => {
 
 exports.getPlaying = (players) => {
     return _.filter(players, {status: GamePlayerStatus.PLAYING})
+};
+
+//TODO: Not working
+exports.findByGameId = (gameId) => {
+    return playerDao.find({gameId});
+};
+
+exports.findByIds = (idList) => {
+    return idList.map(id => exports.findById(id));
+};
+
+exports.findGamePlayersByGameId = (gameId) => {
+    return gamePlayerDao.find({gameId});
 };
