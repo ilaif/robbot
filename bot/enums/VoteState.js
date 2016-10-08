@@ -1,5 +1,6 @@
 'use strict';
 
 module.exports = Object.freeze({
-    GAME: 'game'
+    ACTIVE: 'active',
+    FINISHED: 'finished'
 });

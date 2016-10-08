@@ -2,12 +2,12 @@
 
 let BaseDao = require('./base.dao'),
     _ = require('lodash'),
-    Models = require('../enums/models');
+    Game = require('../models/game.model');
 
 class GameDao extends BaseDao {
 
     constructor() {
-        super(Models.GAME);
+        super(Game);
     }
 
     findGameByChatId(chatId) {
