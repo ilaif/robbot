@@ -1,6 +1,6 @@
 'use strict';
 
-class UserInput {
+class Request {
 
     constructor(msg, cmd, input) {
 
@@ -21,4 +21,4 @@ class UserInput {
 
 }
 
-module.exports = UserInput;
+module.exports = Request;
