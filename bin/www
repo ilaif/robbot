@@ -87,4 +87,9 @@ function onListening() {
     ? 'pipe ' + addr
     : 'port ' + addr.port;
   debug('Listening on ' + bind);
+
+  var http = require("http");
+  setInterval(function() {
+    http.get("http://robplaybot.herokuapp.com");
+  }, 300000); // every 5 minutes (300000)
 }
