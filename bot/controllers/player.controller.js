@@ -161,15 +161,20 @@ exports.vote = (req, res)=> {
                             .then(player => {
                                 res.sendMessage(req.chatId, `Vote ended: kicking ${player.fullName()} out of the game! Final ${getVoteStatusStr(acceptedVotes, rejectedVotes)}`);
 
+                                function getWinningTeam(color) {
+                                    let winning = playingPlayers.filter(p => p.gamePlayer.color == color);
+                                    return winning.map(p => p.fullName()).join(', ');
+                                }
+
                                 // Check if game ended
                                 let results = _.partition(playingPlayers, player => player.gamePlayer.color === PlayerColor.RED);
                                 if (results[0].length == results[1].length) {
                                     return gameHandler.finishGame(game)
-                                        .then(game => res.sendMessage(req.chatId, `The reds win!`));
+                                        .then(game => res.sendMessage(req.chatId, `The reds win! Winning team: ${getWinningTeam(PlayerColor.RED)}`));
                                 }
                                 else if (results[0].length == 0) {
                                     return gameHandler.finishGame(game)
-                                        .then(game => res.sendMessage(req.chatId, `The blacks win!`));
+                                        .then(game => res.sendMessage(req.chatId, `The blacks win! Winning team: ${getWinningTeam(PlayerColor.BLACK)}`));
                                 }
                                 else {
                                     return gameHandler.setState(game, GameState.ACTIVE)
