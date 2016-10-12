@@ -23,6 +23,7 @@ module.exports = {
     },
     log: {
         src: true,
-        level: env.LOG_LEVEL || 'info'
+        level: env.LOG_LEVEL || 'info',
+        console: {}
     }
 };

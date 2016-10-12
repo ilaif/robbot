@@ -20,11 +20,16 @@ process.on('uncaughtException', (err) => {
 });
 
 // First sync db
+let client = botLib.getClient();
 dataModels.sequelize.sync({sync: config.db.forceSync})
     .then(() => {
+        return client.getMe();
+    })
+    .then(botInfo => {
 
-        require('./routes')(botLib.getClient());
+        client.setName(botInfo.username);
 
-        console.log('Rob is up! Listening for messages...');
-        console.log('Environment:', env.NODE_ENV);
+        require('./routes')(client);
+
+        logger.info(`Rob is up on ${env.NODE_ENV}! Listening for messages...`);
     });

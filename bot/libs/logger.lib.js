@@ -14,13 +14,13 @@ let options = {
 if (config.log.console)
     options.streams.push({
         stream: process.stdout,
-        //level: config.log.console.level
+        level: config.log.console.level || 'info'
     });
 
 if (config.log.file)
     options.streams.push({
         path: config.log.file.path,
-        //level: config.log.file.level,
+        level: config.log.file.level || 'info',
         type: 'file'
     });
 

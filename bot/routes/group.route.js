@@ -2,16 +2,28 @@
 
 let Route = require('../models/route.model'),
     config = require('../config'),
+    Sticker = require('../enums/Sticker'),
     Command = require('../enums/Command');
 
-class GameRoute extends Route {
+class GroupRoute extends Route {
     constructor(opts) {
         super(opts);
 
-        this.on('new_chat_participant', (msg, match) => {
+        this.onNewChatParticipant((msg, match) => {
             return this.parseCommand(Command.NEW, {msg, match})
                 .then(() => {
-                    this.res.sendMessage(this.req.chatId, `Welcome to the group ${this.req.from.firstName}! My name is ${config.name}. I am a RoBot ;)\nPlease add me personally by searching for `)
+                    let msg = `Welcome to the group ${this.req.newParticipant.firstName}! My name is ${config.name}. I am a RoBot ;)\nPlease add me personally by searching your contacts for @${this.getBotName()}, only after that you can play the game.`;
+                    this.res.sendMessage(this.req.chatId, msg);
+                })
+                .then(this.catch);
+        });
+
+        this.onLeftChatParticipant((msg, match) => {
+            return this.parseCommand(Command.NEW, {msg, match})
+                .then(() => {
+                    let msg = `${this.req.from.firstName} left the group... That's so sad... JK! I don't fucking care...`;
+                    this.res.sendMessage(this.req.chatId, msg);
+                    this.res.sendSticker(this.req.chatId, Sticker.YEAH_RIGHT);
                 })
                 .then(this.catch);
         });
@@ -19,5 +31,5 @@ class GameRoute extends Route {
 }
 
 module.exports = (client) => {
-    new GameRoute({client});
+    new GroupRoute({client});
 };

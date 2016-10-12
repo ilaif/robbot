@@ -10,18 +10,13 @@ class Request {
         this.game = props.game;
         this.player = props.player;
         this.players = props.players;
-        this.chatId = msg.chat.id;
+        this.chatId = msg.chatId;
         this.cmd = props.cmd;
         this.input = props.input;
 
-        this.from = {};
-        if (msg.from) {
-            this.from = {
-                id: msg.from.id,
-                firstName: msg.from.first_name,
-                lastName: msg.from.last_name
-            };
-        }
+        this.from = msg.from;
+        this.newParticipant = msg.newParticipant;
+        this.leftParticipant = msg.leftParticipant;
 
         logger.debug(this, 'logging request');
     }

@@ -13,6 +13,22 @@ class Route {
         this.req = null;
     }
 
+    getBotName() {
+        return this._client.getName();
+    }
+
+    on(eventName, cb) {
+        this._client.on(eventName, cb);
+    }
+
+    onNewChatParticipant(cb) {
+        this._client.onNewChatParticipant(cb);
+    }
+
+    onLeftChatParticipant(cb) {
+        this._client.onLeftChatParticipant(cb);
+    }
+
     onText(regex, cb) {
         this._client.onText(regex, cb);
     }
