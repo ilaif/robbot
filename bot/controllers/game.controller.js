@@ -1,7 +1,7 @@
 'use strict';
 
 let gameHandler = require('../handlers/game.handler');
-let playerHandler = require('../handlers/player.handler');
+let Sticker = require('../enums/Sticker');
 let GameState = require('../enums/GameState');
 let _ = require('lodash');
 let PlayerColor = require('../enums/PlayerColor');
@@ -47,13 +47,17 @@ exports.startGame = (req, res) => {
 
                 let gamePlayersById = _.keyBy(gamePlayers, 'playerId');
 
+                // Update colors locally
+                players = players.map((player) => {
+                    player.gamePlayer.color = gamePlayersById[player.id].color;
+                    return player;
+                });
+
                 let playersInfo = players.map((player, i) => {
                     return `${i} - ${player.fullName()}: ${_.upperFirst(player.gamePlayer.color)}`;
                 }).join('\n');
 
-                players.forEach(player => {
-                    player.gamePlayer.color = gamePlayersById[player.id].color;
-
+                players.forEach((player, i) => {
                     if (player.gamePlayer.color == PlayerColor.RED) {
                         res.sendMessage(player.telegramId, `Congratulations! You are red!\nPlayers Info\n${playersInfo}`);
                     } else {
@@ -65,7 +69,11 @@ exports.startGame = (req, res) => {
                     }
                 });
 
-                return res.sendMessage(req.chatId, `Game started, good luck :D`);
+                let playingPlayers = players.map((player, i) => {
+                    return `${i} - ${player.fullName()}`;
+                }).join('\n');
+                res.sendMessage(req.chatId, `Game started, good luck :D. Players:\n${playingPlayers}`);
+                return res.sendSticker(req.chatId, Sticker.CRAZY_OPEN_FACE);
             });
     }
     else {

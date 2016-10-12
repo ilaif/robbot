@@ -6,5 +6,6 @@ function getPath(name) {
 
 module.exports = Object.freeze({
     YEAH_RIGHT: getPath('yeah_right'),
-    MUSTACHE_WELCOME: getPath('mustache_welcome')
+    MUSTACHE_WELCOME: getPath('mustache_welcome'),
+    CRAZY_OPEN_FACE: getPath('crazy_open_face')
 });
