@@ -8,19 +8,19 @@ class GameRoute extends Route {
     constructor(opts) {
         super(opts);
 
-        this.onText(/^\/new/, (msg, match) => {
+        this.onText(/^\/new$|^\/new@/, (msg, match) => {
             return this.parseCommand(Command.NEW, {msg, match})
                 .then(() => gameController.newGame(this.req, this.res))
                 .then(this.catch);
         });
 
-        this.onText(/^\/start/, (msg, match) => {
+        this.onText(/^\/start$|^\/start@/, (msg, match) => {
             return this.parseCommand(Command.START, {msg, match})
                 .then(() => gameController.startGame(this.req, this.res))
                 .then(this.catch);
         });
 
-        this.onText(/^\/cancel/, (msg, match) => {
+        this.onText(/^\/cancel$|^\/cancel@/, (msg, match) => {
             return this.parseCommand(Command.CANCEL, {msg, match})
                 .then(() => gameController.cancelGame(this.req, this.res))
                 .then(this.catch);

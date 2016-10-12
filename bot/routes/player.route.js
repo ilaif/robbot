@@ -8,7 +8,7 @@ class PlayerRoute extends Route {
     constructor(opts) {
         super(opts);
 
-        this.onText(/^\/join/, (msg, match) => {
+        this.onText(/^\/join$|^\/join@/, (msg, match) => {
             return this.parseCommand(Command.JOIN, {msg, match})
                 .then(() => playerController.join(this.req, this.res))
                 .then(this.catch);
@@ -20,7 +20,7 @@ class PlayerRoute extends Route {
                 .then(this.catch);
         });
 
-        this.onText(/^\/vote/, (msg, match) => {
+        this.onText(/^\/vote$|^\/vote@/, (msg, match) => {
             return this.parseCommand(null, {msg, match})
                 .then(() => {
                     return this.res.sendMessage(this.req.chatId, `${this.req.from.firstName}: Use /vote <playerName> to start a vote against a player.`);
@@ -28,7 +28,7 @@ class PlayerRoute extends Route {
                 .then(this.catch);
         });
 
-        this.onText(/^\/(yes|no)/, (msg, match) => {
+        this.onText(/^\/(yes|no)$|^\/(yes|no)@/, (msg, match) => {
             return this.parseCommand(Command.VOTE, {msg, match})
                 .then(() => playerController.vote(this.req, this.res))
                 .then(this.catch);
