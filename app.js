@@ -15,6 +15,8 @@ app.use(logger('dev'));
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({extended: false}));
 
+app.set('view engine', 'html');
+
 app.use('/', routes);
 
 // catch 404 and forward to error handler
