@@ -1,6 +1,5 @@
 var express = require('express');
 var path = require('path');
-var logger = require('morgan');
 var bodyParser = require('body-parser');
 
 var routes = require('./routes/index');
@@ -9,13 +8,8 @@ require('./bot');
 
 var app = express();
 
-// uncomment after placing your favicon in /public
-//app.use(favicon(path.join(__dirname, 'public', 'favicon.ico')));
-app.use(logger('dev'));
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({extended: false}));
-
-//app.set('view engine', 'html');
 
 app.use('/', routes);
 
@@ -33,7 +27,7 @@ app.use((req, res, next) => {
 if (app.get('env') === 'development') {
     app.use((err, req, res, next) => {
         res.status(err.status || 500);
-        res.render('error', {
+        res.send({
             message: err.message,
             error: err
         });
@@ -44,7 +38,7 @@ if (app.get('env') === 'development') {
 // no stacktraces leaked to user
 app.use((err, req, res, next) => {
     res.status(err.status || 500);
-    res.render('error', {
+    res.send({
         message: err.message,
         error: {}
     });
