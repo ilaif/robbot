@@ -21,7 +21,7 @@ class GroupRoute extends Route {
         this.onLeftChatParticipant((msg, match) => {
             return this.parseCommand(Command.NEW, {msg, match})
                 .then(() => {
-                    let msg = `${this.req.from.firstName} left the group... That's so sad... JK! I don't fucking care...`;
+                    let msg = `${this.req.leftParticipant.firstName} left the group... That's so sad... JK! I don't fucking care...`;
                     this.res.sendMessage(this.req.chatId, msg);
                     this.res.sendSticker(this.req.chatId, Sticker.YEAH_RIGHT);
                 })
