@@ -170,11 +170,11 @@ exports.vote = (req, res)=> {
                                 let results = _.partition(playingPlayers, player => player.gamePlayer.color === PlayerColor.RED);
                                 if (results[0].length == results[1].length) {
                                     return gameHandler.finishGame(game)
-                                        .then(game => res.sendMessage(req.chatId, `The reds win! Winning team: ${getWinningTeam(PlayerColor.RED)}`));
+                                        .then(game => res.sendMessage(req.chatId, `The reds win! Winning team: ${getWinningTeam(PlayerColor.RED)}.`));
                                 }
                                 else if (results[0].length == 0) {
                                     return gameHandler.finishGame(game)
-                                        .then(game => res.sendMessage(req.chatId, `The blacks win! Winning team: ${getWinningTeam(PlayerColor.BLACK)}`));
+                                        .then(game => res.sendMessage(req.chatId, `The blacks win! Winning team: ${getWinningTeam(PlayerColor.BLACK)}.`));
                                 }
                                 else {
                                     return gameHandler.setState(game, GameState.ACTIVE)

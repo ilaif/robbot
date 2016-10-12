@@ -23,7 +23,7 @@ class PlayerRoute extends Route {
         this.onText(/^\/vote/, (msg, match) => {
             return this.parseCommand(null, {msg, match})
                 .then(() => {
-                    return this.res.sendMessage(`Use /vote <playerName> to start a vote against a player.`);
+                    return this.res.sendMessage(this.req.chatId, `${this.req.from.firstName}: Use /vote <playerName> to start a vote against a player.`);
                 })
                 .then(this.catch);
         });
