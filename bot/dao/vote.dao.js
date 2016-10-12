@@ -1,12 +1,12 @@
 'use strict';
 
 let BaseDao = require('./base.dao'),
-    Vote = require('../models/vote.model.js');
+    VoteDataModel = require('../data_models').Vote;
 
 class VoteDao extends BaseDao {
 
     constructor() {
-        super(Vote);
+        super(VoteDataModel);
     }
 
 }

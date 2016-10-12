@@ -1,8 +1,7 @@
 'use strict';
 
-let utilsLib = require('../libs/utils.lib'),
-    ModelEnum = require('../enums/Model'),
-    BaseModel = require('../models/base.model');
+let ModelEnum = require('../enums/Model');
+let BaseModel = require('../models/base.model');
 
 class Player extends BaseModel {
 

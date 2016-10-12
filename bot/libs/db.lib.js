@@ -6,6 +6,7 @@ let _ = require('lodash'),
     utils = require('../libs/utils.lib');
 
 var data = {};
+/*
 
 utils.getEnumValues(Models).forEach(modelName => {
     data[modelName] = [];
@@ -67,3 +68,4 @@ exports.updateAttributes = (name, instance, attributes) => {
 
     return instance;
 };
+*/

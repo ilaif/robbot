@@ -2,7 +2,6 @@
 
 let playerController = require('../controllers/player.controller'),
     Route = require('../models/route.model'),
-    inputHandler = require('../handlers/input.handler'),
     Command = require('../enums/Command');
 
 class PlayerRoute extends Route {
@@ -10,18 +9,21 @@ class PlayerRoute extends Route {
         super(opts);
 
         this.onText(/\/join/, (msg, match) => {
-            let req = inputHandler.parseCommand(Command.JOIN, {msg, match});
-            playerController.join(req, this.res);
+            return this.parseCommand(Command.JOIN, {msg, match})
+                .then(() => playerController.join(this.req, this.res))
+                .then(this.catch);
         });
 
         this.onText(/\/vote (.+)/, (msg, match) => {
-            let req = inputHandler.parseCommand(Command.VOTE_ROUND, {msg, match});
-            playerController.startVoteRound(req, this.res);
+            return this.parseCommand(Command.VOTE_ROUND, {msg, match})
+                .then(() => playerController.startVoteRound(this.req, this.res))
+                .then(this.catch);
         });
 
         this.onText(/\/(yes|no)/, (msg, match) => {
-            let req = inputHandler.parseCommand(Command.VOTE, {msg, match});
-            playerController.vote(req, this.res);
+            return this.parseCommand(Command.VOTE, {msg, match})
+                .then(() => playerController.vote(this.req, this.res))
+                .then(this.catch);
         });
 
     }

@@ -4,154 +4,193 @@ let gameHandler = require('../handlers/game.handler'),
     GameState = require('../enums/GameState'),
     Vote = require('../enums/Vote'),
     PlayerColor = require('../enums/PlayerColor'),
+    msgHandler = require('../handlers/message.handler'),
+    Promise = require('bluebird'),
     playerHandler = require('../handlers/player.handler'),
     voteHandler = require('../handlers/vote.handler'),
     _ = require('lodash');
 
-//TODO: Add general exception with message to group
-
 exports.join = (req, res) => {
 
-    let isGameActive = gameHandler.isActive(req.chatId);
+    if (!req.isGameActive())
+        return res.sendMessage(req.chatId, `${req.from.firstName}: There's no active game, type /new to start a new game.`);
 
-    if (!isGameActive)
-        return res.sendMessage(req.chatId, `There's no active game, type /new to start a new game.`);
-
-    let game = gameHandler.getGameByChatId(req.chatId);
+    let game = req.game;
 
     if (game.state == GameState.INIT) {
 
-        let playerData = req.from;
+        let playerAttributes = {
+            telegramId: req.from.id,
+            firstName: req.from.firstName,
+            lastName: req.from.lastName
+        };
 
-        let result = playerHandler.addToGame(game, playerData);
+        return playerHandler.addToGame(game, playerAttributes)
+            .spread((player, wasAdded) => {
+                if (wasAdded) {
+                    return res.sendMessage(req.chatId, `Good luck ${player.firstName}, you have successfully joined the game.`);
+                } else {
+                    return res.sendMessage(req.chatId, `${req.from.firstName}: You are already subscribed you silly one ^^.`);
+                }
+            });
 
-        if (result.added) {
-            return res.sendMessage(req.chatId, `Good luck ${result.instance.firstName}, you have successfully joined the game.`);
-        } else {
-            return res.sendMessage(req.chatId, `You are already subscribed you silly one ^^.`);
-        }
     }
     else {
-        return res.sendMessage(req.chatId, `You cannot join the game at this point.`);
+        return res.sendMessage(req.chatId, `${req.from.firstName}: You cannot join the game at this point. ${msgHandler.parseCurrentGameState(game.state)}`);
     }
 };
 
-let playerNamesWithIds = (players) => players.map((p, i) => `${i} - ${p.firstName} ${p.lastName}`);
+let getPlayerNamesWithIds = (players) => players.map((p, i) => `${i} - ${p.fullName()}`);
 
 exports.startVoteRound = (req, res) => {
 
-    let isGameActive = gameHandler.isActive(req.chatId);
+    if (!req.isGameActive())
+        return res.sendMessage(req.chatId, `${req.from.firstName}: There's no active game, type /new to start a new game.`);
 
-    if (!isGameActive)
-        return res.sendMessage(req.chatId, `There's no active game, type /new to start a new game.`);
+    if (!req.isPlayerInGame())
+        return res.sendMessage(req.chatId, `${req.from.firstName}: You did not join the game, so you can't make actions in it.`);
 
-    let game = gameHandler.getGameByChatId(req.chatId);
+    let game = req.game;
 
     if (game.state == GameState.ACTIVE) {
 
         let playerIdentifier = req.input;
-        let gamePlayers = playerHandler.findGamePlayersByGameId(game.id);
-        let playingGamePlayers = playerHandler.getPlaying(gamePlayers);
-        let playingPlayers = playerHandler.findByIds(playingGamePlayers.map(pgp => pgp.playerId));
-        let players = playerHandler.findPlayersInGroupByIdentifier(playingPlayers, playerIdentifier);
-        let names = playerNamesWithIds(playingPlayers).join('\n');
+        let players = req.players;
 
-        if (players === false) {
-            return res.sendMessage(req.chatId, `Could not parse player name, please type /vote <player Id or Name>`)
+        let playingPlayers = playerHandler.getPlaying(players);
+        let votedPlayers = playerHandler.findPlayersInGroupByIdentifier(playingPlayers, playerIdentifier);
+        let names = getPlayerNamesWithIds(playingPlayers).join('\n');
+
+        if (votedPlayers === false) {
+            return res.sendMessage(req.chatId, `${req.from.firstName}: Could not parse player name, please type /vote <player Id or Name>`)
         }
-        else if (players.length == 0) {
-            return res.sendMessage(req.chatId, `No player names found, please choose from this list:\n${names}`);
+        else if (votedPlayers.length == 0) {
+            return res.sendMessage(req.chatId, `${req.from.firstName}: Player name not found, please choose from the following list:\n${names}`);
         }
-        else if (players.length > 1) {
-            return res.sendMessage(req.chatId, `Multiple results for player, please write it accurately or use player id:\n${names}`);
+        else if (votedPlayers.length > 1) {
+            return res.sendMessage(req.chatId, `${req.from.firstName}: Multiple results for player, please write it accurately or use player id:\n${names}`);
         }
         else {
-            let name = `${players[0].firstName} ${players[0].lastName}`;
-            let player = players[0];
+            let player = votedPlayers[0];
 
-            let voteRound = voteHandler.startRound(game, player);
-
-            return res.sendMessage(req.chatId, `${name} is up for a vote! Is he Black or Red??? Make your discussions and vote by typing /yes or /no.`);
+            return voteHandler.startRound(game, player)
+                .then(voteRound => {
+                    return res.sendMessage(req.chatId, `${player.fullName()} is up for a vote! Is he Black or Red??? Make your discussions and vote by typing /yes or /no.`);
+                });
         }
     }
     else {
-        return res.sendMessage(req.chatId, `You cannot vote a player at this point.`);
+        return res.sendMessage(req.chatId, `${req.from.firstName}: You cannot vote a player at this point. ${msgHandler.parseCurrentGameState(game.state)}`);
     }
 };
 
-//TODO: Add player names or users when replying to them.
+function getVoteStatusStr(acceptedVotes, rejectedVotes) {
+    return `Status:\nIn favor: ${acceptedVotes.length}\nAgainst: ${rejectedVotes.length}`;
+}
+
+function updateLocalVotes(vote, votes, acceptedVotes, rejectedVotes) {
+    _.remove(votes, v => v.id === vote.id);
+    _.remove(acceptedVotes, v => v.id === vote.id);
+    _.remove(rejectedVotes, v => v.id === vote.id);
+
+    votes.append(vote);
+    if (vote.accepted)
+        acceptedVotes.append(vote);
+    else
+        rejectedVotes.append(vote);
+}
 
 exports.vote = (req, res)=> {
 
-    let isGameActive = gameHandler.isActive(req.chatId);
+    if (!req.isGameActive())
+        return res.sendMessage(req.chatId, `${req.from.firstName}: There's no active game, type /new to start a new game.`);
 
-    if (!isGameActive)
-        return res.sendMessage(req.chatId, `There's no active game, type /new to start a new game.`);
+    if (!req.isPlayerInGame())
+        return res.sendMessage(req.chatId, `${req.from.firstName}: You did not join the game, so you can't make actions in it.`);
 
-    let game = gameHandler.getGameByChatId(req.chatId);
+    let game = req.game;
 
     if (game.state == GameState.VOTE_ROUND) {
 
         // TODO: Service:
-        let voteRound = voteHandler.getVoteRoundByGame(game);
-        let votes = voteHandler.getVotesByRound(voteRound);
-        let vote = _.find(votes, {playerId: req.from.id});
+        return voteHandler.getVoteRoundByGame(game)
+            .then(voteRound => {
 
-        if (vote) {
-            if (req.input == vote.accepted) {
-                return res.sendMessage(req.chatId, `You have already voted /${vote.accepted} for this vote round.`);
-            } else {
-                voteHandler.setVote(vote, !vote.accepted);
-                res.sendMessage(req.chatId, `Your vote was changed successfully!`);
-            }
-        }
-        else {
-            let accepted = req.input === 'yes';
-            vote = voteHandler.vote(voteRound.id, req.from.id, accepted);
-            votes.push(vote); // Updating local state
-        }
+                let votes = voteRound.votes;
+                let vote = _.find(votes, {playerId: req.player.id});
+                let inputVote = req.input == 'yes';
+                let players = req.players;
+                let playingPlayers = playerHandler.getPlaying(players);
+                let numPlayers = playingPlayers.length;
+                let acceptedVotes = _.filter(votes, {accepted: true});
+                let rejectedVotes = _.filter(votes, {accepted: false});
 
-        let gamePlayers = playerHandler.findGamePlayersByGameId(game.id);
-        let playingGamePlayers = playerHandler.getPlaying(gamePlayers);
-        let numPlayers = gamePlayers.length;
-        let acceptedVotes = _.filter(votes, {accepted: true});
+                if (vote && inputVote == vote.accepted) {
+                    return res.sendMessage(req.chatId, `${req.from.firstName}: You have already voted /${vote.accepted ? 'yes' : 'no'} for this vote round.`);
+                }
 
-        // Check if there's a majority of votes
-        if (acceptedVotes.length > (numPlayers / 2)) {
-            playerHandler.kickPlayer(voteRound);
-            _.remove(playingGamePlayers, gp => {
-                return gp.playerId == voteRound.playerId;
+                return new Promise((resolve, reject) => {
+                    if (vote) {
+                        let newDecision = !vote.accepted;
+                        return voteHandler.setVote(vote, newDecision)
+                            .then(vote => {
+                                updateLocalVotes(vote, votes, acceptedVotes, rejectedVotes);
+                                res.sendMessage(req.chatId, `${req.from.firstName}: Your vote was changed successfully! ${getVoteStatusStr(acceptedVotes, rejectedVotes)}`);
+                                resolve(vote);
+                            });
+                    }
+                    else {
+                        return voteHandler.vote(voteRound.id, req.player.id, inputVote)
+                            .then(vote => {
+                                updateLocalVotes(vote, votes, acceptedVotes, rejectedVotes);
+                                resolve(vote);
+                            });
+                    }
+                }).then(vote => {
+                    if (!vote) return;
+
+                    let votedPlayer = _.filter(playingPlayers, {id: voteRound.playerId})[0];
+
+                    // Check if there's a majority of votes
+                    if (acceptedVotes.length > (numPlayers / 2)) {
+                        return playerHandler.kickPlayer(votedPlayer)
+                            .then(gamePlayer => {
+                                _.remove(playingPlayers, player => player.id == voteRound.playerId);
+                                return playerHandler.findById(voteRound.playerId);
+                            })
+                            .then(player => {
+                                res.sendMessage(req.chatId, `Vote ended: kicking ${player.fullName()} out of the game! Final ${getVoteStatusStr(acceptedVotes, rejectedVotes)}`);
+
+                                // Check if game ended
+                                let results = _.partition(playingPlayers, player => player.gamePlayer.color === PlayerColor.RED);
+                                if (results[0].length == results[1].length) {
+                                    return gameHandler.finishGame(game)
+                                        .then(game => res.sendMessage(req.chatId, `The reds win!`));
+                                }
+                                else if (results[0].length == 0) {
+                                    return gameHandler.finishGame(game)
+                                        .then(game => res.sendMessage(req.chatId, `The blacks win!`));
+                                }
+                                else {
+                                    return gameHandler.setState(game, GameState.ACTIVE)
+                                        .then(game => res.sendMessage(req.chatId, `Game is still ON!!!`));
+                                }
+                            });
+                    }
+                    else if (rejectedVotes.length > (numPlayers / 2)) {
+                        let msg = `Vote ended: Decision is to leave ${votedPlayer.fullName()} in the game. Final ${getVoteStatusStr(acceptedVotes, rejectedVotes)}`;
+                        return gameHandler.setState(game, GameState.ACTIVE)
+                            .then(game => res.sendMessage(req.chatId, msg));
+                    }
+                    else {
+                        let msg = `${req.from.firstName}: Thanks for voting! ${getVoteStatusStr(acceptedVotes, rejectedVotes)}`;
+                        return res.sendMessage(req.chatId, msg);
+                    }
+                });
             });
-            let results = _.partition(playingGamePlayers, {color: PlayerColor.RED});
-
-            let player = playerHandler.findById(voteRound.playerId);
-            let name = `${player.firstName} ${player.lastName}`;
-            res.sendMessage(req.chatId, `Player ${name} is out of the game!`);
-
-            // Check if game ended
-            if (results[0].length == results[1].length) {
-                gameHandler.finishGame(game);
-                return res.sendMessage(req.chatId, `The reds win!`);
-            }
-            else if (results[0].length == 0) {
-                gameHandler.finishGame(game);
-                return res.sendMessage(req.chatId, `The blacks win!`);
-            }
-            else {
-                gameHandler.setState(game, GameState.ACTIVE);
-                return res.sendMessage(req.chatId, `Game is still ON!!!`);
-            }
-
-            //TODO: Add cancel game
-            //TODO: When performing actions check that the player can play
-        } else {
-            let numRejectedVotes = votes.length - acceptedVotes.length;
-            let msg = `Thanks for voting! Status:\nIn favor: ${acceptedVotes.length}\nAgainst: ${numRejectedVotes}`;
-            return res.sendMessage(req.chatId, msg);
-        }
 
     }
     else {
-        return res.sendMessage(req.chatId, `You cannot make a voting decision at this point.`);
+        return res.sendMessage(req.chatId, `${req.from.firstName}: You cannot make a voting decision at this point. ${msgHandler.parseCurrentGameState(game.state)}`);
     }
 };

@@ -1,54 +1,47 @@
 'use strict';
 
-let dbLib = require('../libs/db.lib');
-
 class BaseDao {
 
     constructor(Model) {
         this.Model = Model;
     }
 
-    findById(id) {
-        return dbLib.findById(this.Model.getName(), id);
-    }
-
     findAll() {
-        return dbLib.findAll(this.Model.getName());
+        return this.Model.findAll();
     }
 
     find(filter) {
-        return dbLib.find(this.Model.getName(), filter);
+        return this.Model.findAll({where: filter});
     }
 
     findOne(filter) {
-        return dbLib.findOne(this.Model.getName(), filter);
+        return this.Model.findOne({where: filter})
+    }
+
+    findById(id) {
+        return this.Model.findById(id);
+    }
+
+    create(object) {
+        return this.Model.create(object);
     }
 
     save(instance) {
-        return dbLib.create(this.Model.getName(), instance);
+        return instance.save();
     }
 
-    create(attributes) {
-        let instance = new this.Model(attributes);
-        return this.save(instance);
+    update(filter, values) {
+        return this.Model.update(values, {where: filter})
+            .then(res => {
+                return {updated: res[0] > 0, amount: res[0]}
+            });
     }
 
     findOrCreate(filter, defaults) {
-        let instance = this.findOne(filter);
-        if (instance)
-            return {created: false, instance: instance};
-        else {
-            instance = this.create(defaults);
-            return {created: true, instance}
-        }
-    }
-
-    update(instance) {
-        return dbLib.update(this.Model.getName(), instance);
-    }
-
-    updateAttributes(instance, attributes) {
-        return dbLib.updateAttributes(this.Model.getName(), instance, attributes);
+        return this.Model.findOrCreate({where: filter, defaults})
+            .spread((instance, updated) => {
+                return [instance, updated];
+            });
     }
 
 }

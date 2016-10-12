@@ -5,19 +5,14 @@ let playerDao = require('../dao/player.dao'),
     GamePlayerStatus = require('../enums/GamePlayerStatus'),
     _ = require('lodash');
 
-exports.addToGame = (game, playerData) => {
-    let results = playerDao.findOrCreate(playerData, playerData);
-    let player = results.instance;
-    let playerCreated = results.created;
-    let attributes = {playerId: player.id, gameId: game.id};
-    results = gamePlayerDao.findOrCreate(attributes, attributes);
-    let gamePlayer = results.instance;
-    let gamePlayerCreated = results.created;
-
-    return {
-        added: gamePlayerCreated,
-        instance: player
-    };
+exports.addToGame = (game, playerAttributes) => {
+    return playerDao.findOrCreate({telegramId: playerAttributes.telegramId}, playerAttributes)
+        .spread((player, playerUpdated) => {
+            let attributes = {playerId: player.id, gameId: game.id};
+            return gamePlayerDao.findOrCreate(attributes, attributes)
+                .spread((gamePlayer, gamePlayerUpdated) => [player, gamePlayerUpdated]);
+        })
+        .spread((player, gamePlayerUpdated) => [player, gamePlayerUpdated]);
 };
 
 exports.findPlayersInGroupByIdentifier = (players, identifier) => {
@@ -58,6 +53,10 @@ exports.findPlayersInGroupByIdentifier = (players, identifier) => {
     }
 };
 
+exports.findByTelegramId = (telegramId) => {
+    return playerDao.findOne({telegramId});
+};
+
 exports.findById = (id) => {
     return playerDao.findById(id);
 };
@@ -66,25 +65,17 @@ exports.findGamePlayerById = (id) => {
     return gamePlayerDao.findOne({playerId: id});
 };
 
-exports.kickPlayer = (voteRound) => {
-    let gamePlayer = gamePlayerDao.findOne({playerId: voteRound.playerId});
-    gamePlayer.status = GamePlayerStatus.OUT;
-    gamePlayerDao.update(gamePlayer);
+exports.kickPlayer = (player) => {
+    player.gamePlayer.status = GamePlayerStatus.OUT;
+    return gamePlayerDao.save(player.gamePlayer);
 };
 
 exports.getPlaying = (players) => {
-    return _.filter(players, {status: GamePlayerStatus.PLAYING})
+    return _.filter(players, (player) => {
+        return player.gamePlayer.status === GamePlayerStatus.PLAYING;
+    })
 };
 
-//TODO: Not working
 exports.findByGameId = (gameId) => {
-    return playerDao.find({gameId});
-};
-
-exports.findByIds = (idList) => {
-    return idList.map(id => exports.findById(id));
-};
-
-exports.findGamePlayersByGameId = (gameId) => {
-    return gamePlayerDao.find({gameId});
+    return playerDao.findByGameId(gameId);
 };

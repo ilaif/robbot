@@ -1,7 +1,6 @@
 'use strict';
 
-let utilsLib = require('../libs/utils.lib'),
-    BaseModel = require('../models/base.model'),
+let BaseModel = require('../models/base.model'),
     ModelEnum = require('../enums/Model'),
     VoteState = require('../enums/VoteState');
 

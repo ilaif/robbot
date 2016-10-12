@@ -1,75 +1,95 @@
 'use strict';
 
-let gameHandler = require('../handlers/game.handler'),
-    playerHandler = require('../handlers/player.handler'),
-    GameState = require('../enums/GameState'),
-    _ = require('lodash'),
-    PlayerColor = require('../enums/PlayerColor'),
-    config = require('../config');
+let gameHandler = require('../handlers/game.handler');
+let playerHandler = require('../handlers/player.handler');
+let GameState = require('../enums/GameState');
+let _ = require('lodash');
+let PlayerColor = require('../enums/PlayerColor');
+let msgHandler = require('../handlers/message.handler');
+let config = require('../config');
 
 exports.newGame = (req, res) => {
 
-    let isGameActive = gameHandler.isActive(req.chatId);
+    if (req.isGameActive())
+        return res.sendMessage(req.chatId, `${req.from.firstName}: Game is already active`);
 
-    if (isGameActive) {
-        return res.sendMessage(req.chatId, `Game is already active`);
-    }
-    else {
-        res.sendMessage(req.chatId, `Initializing a new game :)`);
+    res.sendMessage(req.chatId, `Initializing a new game :)`);
 
-        let game = gameHandler.createNew(req.chatId);
-
-        return res.sendMessage(req.chatId, `Type '/join' to join the game`);
-    }
+    return gameHandler.createNew(req.chatId)
+        .then(game => {
+            return res.sendMessage(req.chatId, `Everyone can type '/join' to join the game`);
+        });
 };
 
 exports.startGame = (req, res) => {
 
-    let isGameActive = gameHandler.isActive(req.chatId);
-    if (!isGameActive)
-        return res.sendMessage(req.chatId, `There's no active game, type /new to start a new game.`);
+    if (!req.isGameActive())
+        return res.sendMessage(req.chatId, `${req.from.firstName}: There's no active game, type /new to start a new game.`);
 
-    let game = gameHandler.getGameByChatId(req.chatId);
+    if (!req.isPlayerInGame())
+        return res.sendMessage(req.chatId, `${req.from.firstName}: You did not join the game, so you can't make actions in it.`);
+
+    let game = req.game;
 
     if (game.state == GameState.INIT) {
 
-        let gamePlayers = playerHandler.findGamePlayersByGameId(game.id);
-        let players = playerHandler.findByIds(gamePlayers.map(gp => gp.playerId));
+        let players = req.players;
 
         if (players.length < 3 && !config.noRules) {
             let playerNames = players.map(p => p.firstName).join(', ');
-            let joinedPlayers = players.length > 0 ? ` Currently ${playerNames} have joined.` : ` Nobody is joined`;
-            return res.sendMessage(req.chatId, `Less than 3 players joined the game. ${joinedPlayers}`);
+            let joinedPlayers = players.length > 0 ? `Currently ${playerNames} have joined.` : ` Nobody is joined`;
+            return res.sendMessage(req.chatId, `${req.from.firstName}: Less than 3 players joined the game. ${joinedPlayers}`);
         }
 
-        let playersById = _.keyBy(players, 'id');
+        return gameHandler.start(game)
+            .then(gamePlayers => {
+                // Notify all players
 
-        gameHandler.start(game);
+                let gamePlayersById = _.keyBy(gamePlayers, 'playerId');
 
-        // Notify all players
+                let playersInfo = players.map((player, i) => {
+                    return `${i} - ${player.fullName()}: ${_.upperFirst(player.gamePlayer.color)}`;
+                }).join('\n');
 
-        let playersInfo = gamePlayers.map((gamePlayer, i) => {
-            let player = playersById[gamePlayer.playerId];
-            return `${i} - ${player.firstName} ${player.lastName}: ${_.upperFirst(gamePlayer.color)}`;
-        }).join('\n');
+                players.forEach(player => {
+                    player.gamePlayer.color = gamePlayersById[player.id].color;
 
-        let hiddenPlayersInfo = gamePlayers.map((gamePlayer, i) => {
-            //TODO: Don't hide own user
-            let player = playersById[gamePlayer.playerId];
-            return `${i} - ${player.firstName} ${player.lastName}: ?`;
-        }).join('\n');
+                    if (player.gamePlayer.color == PlayerColor.RED) {
+                        res.sendMessage(player.telegramId, `Congratulations! You are red!\nPlayers Info\n${playersInfo}`);
+                    } else {
+                        let hiddenPlayersInfo = players.map((curPlayer, i) => {
+                            let color = player.id == curPlayer.id ? player.gamePlayer.color : '?';
+                            return `${i} - ${curPlayer.fullName()}: ${color}`;
+                        }).join('\n');
+                        res.sendMessage(player.telegramId, `You are black - Good luck! ^^\nPlayers Info\n${hiddenPlayersInfo}`);
+                    }
+                });
 
-        gamePlayers.forEach(gamePlayer => {
-            if (gamePlayer.color == PlayerColor.RED) {
-                res.sendMessage(gamePlayer.playerId, `Congratulations! You are red!\nPlayers Info\n${playersInfo}`);
-            } else {
-                res.sendMessage(gamePlayer.playerId, `You are black - Good luck! ^^\nPlayers Info\n${hiddenPlayersInfo}`);
-            }
-        });
-
-        return res.sendMessage(req.chatId, `Game started, good luck :D`);
+                return res.sendMessage(req.chatId, `Game started, good luck :D`);
+            });
     }
     else {
-        return res.sendMessage(req.chatId, `You cannot start the game at this point.`);
+        return res.sendMessage(req.chatId, `${req.from.firstName}: You cannot start the game at this point. ${msgHandler.parseCurrentGameState(game.state)}`);
+    }
+};
+
+exports.cancelGame = (req, res) => {
+
+    if (!req.isGameActive())
+        return res.sendMessage(req.chatId, `${req.from.firstName}: There's no active game, type /new to start a new game.`);
+
+    //if (!req.isPlayerInGame())
+    //    return res.sendMessage(req.chatId, `${req.from.firstName}: You did not join the game, so you can't make actions in it.`);
+
+    let game = req.game;
+
+    if (~[GameState.CANCELLED, GameState.FINISHED].indexOf(game.state)) {
+        return res.sendMessage(req.chatId, `${req.from.firstName}: You cannot cancel the game at this point. ${msgHandler.parseCurrentGameState(game.state)}`);
+    }
+    else {
+        return gameHandler.cancelGame(game)
+            .then(() => {
+                return res.sendMessage(req.chatId, `Game was cancelled successfully.`);
+            });
     }
 };

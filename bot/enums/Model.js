@@ -1,9 +1,10 @@
 'use strict';
 
 module.exports = Object.freeze({
+    GROUP: 'group',
     GAME: 'game',
     PLAYER: 'player',
-    GAME_PLAYER: 'game_player',
-    VOTE_ROUND: 'vote_round',
+    GAME_PLAYER: 'gamePlayer',
+    VOTE_ROUND: 'voteRound',
     VOTE: 'vote'
 });

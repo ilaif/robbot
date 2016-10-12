@@ -1,18 +1,34 @@
 'use strict';
 
-let BaseDao = require('./base.dao'),
-    _ = require('lodash'),
-    Game = require('../models/game.model');
+let BaseDao = require('./base.dao');
+let GroupDao = require('./group.dao');
+let GameDataModel = require('../data_models').Game;
+let GroupDataModel = require('../data_models').Group;
+let GameStatus = require('../enums/GameStatus');
 
 class GameDao extends BaseDao {
 
     constructor() {
-        super(Game);
+        super(GameDataModel);
     }
 
-    findGameByChatId(chatId) {
-        let res = _.filter(this.findAll(), {chatId});
-        return res.length > 0 ? res[0] : null;
+    findActiveGameByChatId(chatId) {
+        return this.Model.findOne({
+            where: {
+                status: GameStatus.ACTIVE
+            },
+            include: [{
+                model: GroupDataModel,
+                where: {chatId}
+            }]
+        });
+    }
+
+    createByChatId(chatId) {
+        return GroupDao.findOrCreate({chatId}, {chatId})
+            .spread((group, updated) => {
+                return this.Model.create({groupId: group.id});
+            });
     }
 
 }

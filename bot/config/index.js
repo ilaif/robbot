@@ -1,6 +1,7 @@
 'use strict';
 
-var defaultConfig = require('./index'),
+var defaultConfig = require('./default'),
+    env = process.env,
     _ = require('lodash');
 
 var tryRequire = (name) => {
@@ -14,5 +15,5 @@ var tryRequire = (name) => {
     return false;
 };
 
-let conf = tryRequire(`./${'default'}`);
-module.exports = (conf) ? _.merge(defaultConfig, conf) : defaultConfig;
+let envConf = tryRequire(`./${env.NODE_ENV}`);
+module.exports = (envConf) ? _.merge(defaultConfig, envConf) : defaultConfig;
