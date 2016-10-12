@@ -93,11 +93,11 @@ function updateLocalVotes(vote, votes, acceptedVotes, rejectedVotes) {
     _.remove(acceptedVotes, v => v.id === vote.id);
     _.remove(rejectedVotes, v => v.id === vote.id);
 
-    votes.append(vote);
+    votes.push(vote);
     if (vote.accepted)
-        acceptedVotes.append(vote);
+        acceptedVotes.push(vote);
     else
-        rejectedVotes.append(vote);
+        rejectedVotes.push(vote);
 }
 
 exports.vote = (req, res)=> {
